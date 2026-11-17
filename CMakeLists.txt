@@ -51,10 +51,15 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   pcl_ros
   tf
-  livox_ros_driver
   message_generation
   eigen_conversions
 )
+
+## Optional: Livox CustomMsg support (lidar_type: 1, Avia/Horizon/Mid-70).
+## livox_ros_driver is NOT a hard dependency. It is auto-detected here, so it must be
+## built in a workspace that is sourced BEFORE building fast_lio (an underlay); it is
+## deliberately not declared in package.xml, so catkin will not order it for us.
+find_package(livox_ros_driver QUIET)
 
 find_package(Eigen3 REQUIRED)
 find_package(PCL 1.8 REQUIRED)
@@ -87,3 +92,13 @@ catkin_package(
 add_executable(fastlio_mapping src/laserMapping.cpp include/ikd-Tree/ikd_Tree.cpp src/preprocess.cpp)
 target_link_libraries(fastlio_mapping ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PYTHON_LIBRARIES})
 target_include_directories(fastlio_mapping PRIVATE ${PYTHON_INCLUDE_DIRS})
+
+if(livox_ros_driver_FOUND)
+  message(STATUS "fast_lio: livox_ros_driver found -- Livox CustomMsg support ENABLED (lidar_type: 1)")
+  target_compile_definitions(fastlio_mapping PRIVATE HAVE_LIVOX)
+  target_include_directories(fastlio_mapping SYSTEM PRIVATE ${livox_ros_driver_INCLUDE_DIRS})
+  add_dependencies(fastlio_mapping ${livox_ros_driver_EXPORTED_TARGETS})
+else()
+  message(STATUS "fast_lio: livox_ros_driver NOT found -- Livox CustomMsg support DISABLED (lidar_type: 1 will exit with an error). "
+                 "To enable it, build livox_ros_driver in a workspace, source it, then rebuild fast_lio.")
+endif()

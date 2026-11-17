@@ -5,7 +5,9 @@
 #include <ros/ros.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <sensor_msgs/PointCloud2.h>
+#ifdef HAVE_LIVOX
 #include <livox_ros_driver/CustomMsg.h>
+#endif
 
 using namespace std;
 
@@ -91,7 +93,9 @@ class Preprocess
   Preprocess();
   ~Preprocess();
   
+#ifdef HAVE_LIVOX
   void process(const livox_ros_driver::CustomMsg::ConstPtr &msg, PointCloudXYZI::Ptr &pcl_out);
+#endif
   void process(const sensor_msgs::PointCloud2::ConstPtr &msg, PointCloudXYZI::Ptr &pcl_out);
   void set(bool feat_en, int lid_type, double bld, int pfilt_num);
 
@@ -107,7 +111,9 @@ class Preprocess
     
 
   private:
+#ifdef HAVE_LIVOX
   void avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg);
+#endif
   void oust64_handler(const sensor_msgs::PointCloud2::ConstPtr &msg);
   void velodyne_handler(const sensor_msgs::PointCloud2::ConstPtr &msg);
   void sim_handler(const sensor_msgs::PointCloud2::ConstPtr &msg);

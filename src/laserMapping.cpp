@@ -56,7 +56,9 @@
 #include <tf/transform_datatypes.h>
 #include <tf/transform_broadcaster.h>
 #include <geometry_msgs/Vector3.h>
+#ifdef HAVE_LIVOX
 #include <livox_ros_driver/CustomMsg.h>
+#endif
 #include "preprocess.h"
 #include <ikd-Tree/ikd_Tree.h>
 
@@ -299,6 +301,7 @@ void standard_pcl_cbk(const sensor_msgs::PointCloud2::ConstPtr &msg)
 
 double timediff_lidar_wrt_imu = 0.0;
 bool   timediff_set_flg = false;
+#ifdef HAVE_LIVOX
 void livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg) 
 {
     mtx_buffer.lock();
@@ -332,6 +335,7 @@ void livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg)
     mtx_buffer.unlock();
     sig_buffer.notify_all();
 }
+#endif  // HAVE_LIVOX
 
 void imu_cbk(const sensor_msgs::Imu::ConstPtr &msg_in) 
 {
@@ -794,6 +798,15 @@ int main(int argc, char** argv)
 
     p_pre->lidar_type = lidar_type;
     cout<<"p_pre->lidar_type "<<p_pre->lidar_type<<endl;
+#ifndef HAVE_LIVOX
+    if (lidar_type == AVIA)
+    {
+        ROS_ERROR("preprocess/lidar_type is 1 (Livox CustomMsg) but fast_lio was built WITHOUT "
+                  "livox_ros_driver. Build livox_ros_driver in a workspace, source it, and rebuild "
+                  "fast_lio to enable it, or choose another lidar_type.");
+        return 1;
+    }
+#endif
     
     path.header.stamp    = ros::Time::now();
     path.header.frame_id ="camera_init";
@@ -842,9 +855,13 @@ int main(int argc, char** argv)
         cout << "~~~~"<<ROOT_DIR<<" doesn't exist" << endl;
 
     /*** ROS subscribe initialization ***/
+#ifdef HAVE_LIVOX
     ros::Subscriber sub_pcl = p_pre->lidar_type == AVIA ? \
         nh.subscribe(lid_topic, 200000, livox_pcl_cbk) : \
         nh.subscribe(lid_topic, 200000, standard_pcl_cbk);
+#else
+    ros::Subscriber sub_pcl = nh.subscribe(lid_topic, 200000, standard_pcl_cbk);
+#endif
     ros::Subscriber sub_imu = nh.subscribe(imu_topic, 200000, imu_cbk);
     ros::Publisher pubLaserCloudFull = nh.advertise<sensor_msgs::PointCloud2>
             ("/cloud_registered", 100000);

@@ -1,0 +1,51 @@
+# FAST-LIO config for the p-steer rig: Hesai QT128 + Xsens (/imu/data), replacing GLIM.
+# Use with launch/mapping_hesai_qt128.launch, which also starts
+# scripts/hesai_qt128_bridge.py (FAST-LIO has no Hesai input type):
+#   - /hesai/points_lio: the QT128 cloud re-packed as velodyne points (per-point
+#     'time' in SECONDS since the scan-start header stamp, 'ring' 0..127), cropped
+#     to a +/-30 m box.
+#   - /imu/data_lio: /imu/data re-stamped at its real ~400 Hz rate (the driver stamps
+#     it in bursts) with dropout gaps filled from the Xsens orientation.
+# Derived from the CMU Husky rig config (VLP-32C + VN-200, validated); IMU noise,
+# det_range and the launch-level tuning are kept. Sensor-specific changes:
+#   - The Xsens is z-UP (not NED like the VN-200), so no 180 deg flip.
+#   - Extrinsic ^{imu}T_{lidar} from the robot's static TFs (base_link->imu,
+#     base_link->hesai_lidar): R ~ I (0.18 deg yaw), t = [-0.040, -0.017, 0.273].
+#     Recompute if the URDF / mounting changes.
+common:
+    lid_topic:  "/hesai/points_lio"
+    imu_topic:  "/imu/data_lio"
+    time_sync_en: false
+    time_offset_lidar_to_imu: 0.0
+
+preprocess:
+    lidar_type: 2                # 1 livox, 2 velodyne, 3 ouster (QT128 re-packed as velodyne)
+    scan_line: 128               # QT128
+    scan_rate: 10                # Hz
+    timestamp_unit: 0            # converter writes per-point 'time' in SECONDS
+    blind: 1.0
+
+mapping:
+    acc_cov: 0.01
+    gyr_cov: 0.0001
+    b_acc_cov: 0.000001
+    b_gyr_cov: 0.000001
+    fov_degree:    180
+    # Local map box management only (NOT a point range filter). Must satisfy
+    # 1.5 * det_range < cube_side_length / 2.
+    det_range:     30.0
+    extrinsic_est_en:  false
+    extrinsic_T: [ -0.039919, -0.017181, 0.273195 ]
+    extrinsic_R: [  0.999995,  0.003187, -0.000004,
+                   -0.003187,  0.999995, -0.000007,
+                    0.000004,  0.000007,  1.000000 ]
+
+publish:
+    path_en:  true
+    scan_publish_en:  true
+    dense_publish_en: false
+    scan_bodyframe_pub_en: false
+
+pcd_save:
+    pcd_save_en: false
+    interval: -1

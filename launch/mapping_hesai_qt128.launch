@@ -1,0 +1,39 @@
+<launch>
+  <!-- FAST-LIO for the p-steer rig (Hesai QT128 + Xsens), replacing GLIM.
+       Inputs:  /hesai/points, /imu/data, static TF base_link->imu (robot bringup).
+       Outputs: TF map->odom (identity, no loop closure) ->base_link (gravity-aligned,
+                z-up), /lio_odom (odom frame), /lio_pose (PoseStamped, map frame), plus
+                FAST-LIO's own /Odometry, /path, /cloud_registered (camera_init frame).
+       GLIM must NOT run at the same time (it also publishes odom->base_link).
+       Launch-level tuning from the CMU Husky rig. -->
+
+    <arg name="rviz" default="false" />
+
+    <rosparam command="load" file="$(find fast_lio)/config/hesai_qt128.yaml" />
+
+    <param name="feature_extract_enable" type="bool" value="0"/>
+    <param name="point_filter_num" type="int" value="8"/>
+    <param name="max_iteration" type="int" value="3" />
+    <param name="filter_size_surf" type="double" value="0.6" />
+    <param name="filter_size_map" type="double" value="0.6" />
+    <param name="cube_side_length" type="double" value="250" />
+    <param name="runtime_pos_log_enable" type="bool" value="0" />
+    <node pkg="fast_lio" type="fastlio_mapping" name="laserMapping" output="screen" />
+
+    <!-- Hesai/IMU adapter in, gravity-aligned odom->base_link out -->
+    <node pkg="fast_lio" type="hesai_qt128_bridge.py" name="hesai_qt128_bridge" output="screen">
+        <param name="map_frame" value="map" />  <!-- "" disables map->odom and /lio_pose -->
+        <param name="odom_frame" value="odom" />
+        <param name="base_frame" value="base_link" />
+        <param name="imu_frame" value="imu" />
+        <!-- Crop FAST-LIO's input to a +/-30 m box, as hesai_qt128.yaml documents
+             (the bridge defaults to 60 m). On the airfield bags this drops only
+             ~1% of the points: most QT128 returns are within 30 m anyway. -->
+        <param name="crop_box" type="double" value="30.0" />
+    </node>
+
+    <group if="$(arg rviz)">
+        <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find fast_lio)/rviz_cfg/loam_livox.rviz" />
+    </group>
+
+</launch>

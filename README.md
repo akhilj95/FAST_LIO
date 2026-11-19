@@ -148,6 +148,7 @@ Clone the repository and catkin_make:
     source devel/setup.bash
 ```
 - Only for Livox ``` lidar_type: 1 ```: source the workspace containing livox_ros_driver before building (follow 1.3 **livox_ros_driver**)
+- CPU cores used for the parallel matching loop: set ``` MP_CORES ``` near the top of ``` CMakeLists.txt ``` (a positive integer, or ``` "auto" ``` to choose from the host's core count). Rebuild after changing it.
 - If you want to use a custom build of PCL, add the following line to ~/.bashrc
 ```export PCL_ROOT={CUSTOM_PCL_PATH}```
 ## 3. Directly run
@@ -221,7 +222,15 @@ Then Run FAST-LIO:
 roslaunch fast_lio mapping_marsim.launch
 ```
 
-### 3.5 PCD file save
+### 3.5 For Hesai QT128 + Xsens IMU
+
+``` scripts/hesai_qt128_bridge.py ``` converts ``` /hesai/points ``` and ``` /imu/data ``` into FAST-LIO's input format and publishes gravity-aligned ``` odom->base_link ``` TF, ``` /lio_odom ``` and ``` /lio_pose ``` (see the header of the script and ``` config/hesai_qt128.yaml ```).
+
+```
+roslaunch fast_lio mapping_hesai_qt128.launch
+```
+
+### 3.6 PCD file save
 
 Set ``` pcd_save_enable ``` in launchfile to ``` 1 ```. All the scans (in global frame) will be accumulated and saved to the file ``` FAST_LIO/PCD/scans.pcd ``` after the FAST-LIO is terminated. ```pcl_viewer scans.pcd``` can visualize the point clouds.
 
